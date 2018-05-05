@@ -3,27 +3,32 @@
 #include <array>
 #include <cstdint>
 #include <vector>
+#include <iostream>
 
+
+class TimetablingProblem;
+
+using std::array;
+using std::vector;
 class CourseSolution {
  public:
-  static constexpr int dayCount = 5;
-  static constexpr int slotsPerDay = 9;
-  static constexpr int slotCount = dayCount * slotsPerDay;
+  static constexpr unsigned dayCount = 5;
+  static constexpr unsigned slotsPerDay = 9;
+  static constexpr unsigned slotCount = dayCount * slotsPerDay;
   // index represents a room, integer represents a course
-  using std::array;
-  using std::vector;
+
   // -1 signifies empty room
   using Slot = vector<int>;
   using Slots = array<Slot, slotCount>;
 
-  CourseSolution() {}
-  CourseSolution(const Slots& s) : slots_(s) {}
-  CourseSolution(Slots&& s) : slots_(s) {}
+  CourseSolution(const TimetablingProblem& ttp);
 
   Slots& slots() { return slots_; }
   const Slots& slots() const { return slots_; }
 
   void swap(CourseSolution& other) { slots_.swap(other.slots_); }
+
+  void print();
 
  private:
   Slots slots_;
@@ -31,8 +36,6 @@ class CourseSolution {
 
 class Room {
  public:
-  using std::vector;
-
   Room(size_t s) : size_(s) {}
 
   size_t size() const { return size_; }
@@ -44,10 +47,10 @@ class Room {
   vector<bool> features_;
 };
 
+class HbmoEtp;
+
 class Student {
  public:
-  using std::vector;
-
   Student(){};
   Student(const vector<bool>& a) : attendance_(a) {}
   Student(vector<bool>&& a) : attendance_(a) {}
@@ -61,8 +64,6 @@ class Student {
 
 class Course {
  public:
-  using std::vector;
-
   Course(const vector<bool>& f) : requiredFeatures_(f) {}
 
   vector<bool>& requiredFeatures() { return requiredFeatures_; }
@@ -71,19 +72,18 @@ class Course {
 
  private:
   vector<bool> requiredFeatures_;
+  friend int course_conflicts(HbmoEtp& hbmo, const CourseSolution& sln, int course);
+  friend int feasible_timeslots(HbmoEtp& hbmo, const CourseSolution& sln, int course);
 };
+
+using std::vector;
+using std::cout;
+using std::cin;
 
 class TimetablingProblem {
  public:
-  using std::vector;
-  using std::cout;
-  using std::cin;
 
   TimetablingProblem() { read_from_stdin(); }
-
-  bool feasible(const CourseSolution& s) const {
-    return true;  // TODO?
-  }
 
   // helper for studentAvailibility indexing
   inline bool available(const vector<bool>& a, int slot, size_t student,
@@ -95,29 +95,29 @@ class TimetablingProblem {
   // modified implementation of checksln.cpp
   size_t conflicts(const CourseSolution& s) const {
     size_t softConflicts = 0;
-    vector<bool> studentAvailability { students_.size() * slotCount, true }
+    vector<bool> studentAvailability(students_.size() * CourseSolution::slotCount, true );
     // get student availibility
-    for (size_t s = 0; s < slotCount; ++s) {
-      auto&& slot = s.slots()[s];
+    for (size_t sl = 0; sl < CourseSolution::slotCount; ++sl) {
+      auto&& slot = s.slots()[sl];
       for (size_t st = 0; st < students_.size(); ++st) {
         auto&& schedule = students_[st].attendance();
-        for (auto&& room : slots) {
+        for (auto&& room : slot) {
           if (room == -1) {
             continue;
           }
           if (schedule[room]) {
-            studentAvailability[s * students_.size() + st] = false;
+            studentAvailability[sl * students_.size() + st] = false;
           }
         }
       }
     }
     // more than two consecutive lectures
     for (size_t g = 0; g < students_.size(); ++g) {
-      for (int day = 0; d < dayCount; ++d) {
+      for (unsigned day = 0; day < CourseSolution::dayCount; ++day) {
         int count = 0;
 
-        for (int t = 0; t < slotsPerDay; ++t) {
-          int slot = d * slotsPerDay + t;
+        for (unsigned t = 0; t < CourseSolution::slotsPerDay; ++t) {
+          int slot = day * CourseSolution::slotsPerDay + t;
           if (available(studentAvailability, slot, g, students_.size()) ==
               false)
             count++;
@@ -170,7 +170,13 @@ class TimetablingProblem {
   }
 
   const vector<Course>& courses() const { return courses_; }
-  const vector<Room>& rooms() const {return rooms_};
+  const vector<Room>& rooms() const { return rooms_; }
+  const vector<Student>& students() const { return students_; }
+
+  unsigned nCourses;
+  unsigned nRooms;
+  unsigned nStudents;
+  unsigned nFeatures;
 
  private:
   vector<Room> rooms_;
@@ -188,11 +194,11 @@ class TimetablingProblem {
     size_t roomSize;
     for (size_t i = 0; i < rooms; ++i) {
       cin >> roomSize;
-      rooms_.emplace_back(roomSize);
+      rooms_.push_back({roomSize});
     }
     // student-course attendance
     bool attending;
-    vector<size_t> coursesAttendance{students, 0};
+    vector<size_t> coursesAttendance(courses, 0);
     for (size_t i = 0; i < students; ++i) {
       std::vector<bool> attendance;
       for (size_t j = 0; j < courses; ++j) {
@@ -200,28 +206,35 @@ class TimetablingProblem {
         coursesAttendance[j] += attending;
         attendance.push_back(attending);
       }
-      students_.emplace_back(attendance);
+      students_.push_back(attendance);
     }
+    std::cout << __FILE__ << ": " << __LINE__ << "\n";
     // room-feature
     bool hasFeature;
     for (size_t i = 0; i < rooms; ++i) {
-      auto&& features = rooms_[i].features();
-      for (size_t j = 0; j < features; ++j) {
+      auto& roomFeatures = rooms_[i].features();
+      for (size_t j = 0; j < features_; ++j) {
         cin >> hasFeature;
-        features.push_back(hasFeature);
+        roomFeatures.push_back(hasFeature);
       }
     }
     // course-feature
     bool requiresFeature;
     for (size_t i = 0; i < courses; ++i) {
       std::vector<bool> requiredFeatures;
-      for (size_t j = 0; j < features; ++j) {
+      for (size_t j = 0; j < features_; ++j) {
         cin >> requiresFeature;
         requiredFeatures.push_back(requiresFeature);
       }
       courses_.emplace_back(requiredFeatures);
       courses_.back().students = coursesAttendance[i];
     }
+
+    nCourses = courses_.size();
+    nRooms = rooms_.size();
+    nStudents = students_.size();
+    nRooms = rooms_.size();
+    nFeatures = features_;
   }
 };
 

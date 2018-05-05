@@ -3,41 +3,35 @@
 
 #include <course_timetabling.h>
 #include <utility>
+#include <set>
+#include <tuple>
+#include <deque>
 
 class Queen {
  public:
-  using std::vector;
   using Bee = CourseSolution;
-  static constexpr spermLimit = 10;
+  static constexpr int spermLimit = 10;
 
-  Queen() {}
+  Queen(const TimetablingProblem& ttp): body(ttp) {}
   size_t sperm_count() const { return sperms.size(); }
-  void add_sperm(Bee& sperm) { sperms.push_back(&sperm); }
-  clear_sperms() { sperms.clear(); }
-  vector<Bee> sperms() {
-    vector<Bee> result;
-    result.reserve(sperms.size());
-    for (auto beePtr : sperms) {
-      result.push_back(*beePtr);
-    }
-    return result;
-  }
-
+  void add_sperm(Bee& sperm) { sperms.push_back(sperm); }
+  void clear_sperms() { sperms.clear(); }
+  vector<Bee> sperms;
   Bee body;
-
- private:
-  vector<Bee*> sperms;
 };
 
 class HbmoEtp {
  public:
   using Bee = Queen::Bee;
-  using std::vector;
 
-  HbmoEtp(const TimetablingProblem& problem) : problem(problem) {}
+  HbmoEtp(const TimetablingProblem& problem) : problem(problem), queen(problem) {
+    calculate_course_conflicts();
+  }
 
   CourseSolution run();
 
+  vector<size_t> m_feasible_timeslots(const CourseSolution& sln, int course);
+  int m_course_conflicts(int course);
  private:
   const TimetablingProblem& problem;
   Queen queen;
@@ -45,10 +39,13 @@ class HbmoEtp {
 
   vector<Bee> dronePopulation;
   vector<size_t> droneConflicts;
+  vector<bool> courseConflicts;
 
   vector<Bee> broodPopulation;
-  constexpr double alpha = 0.9;
-  constexpr size_t sdIterations = 5000;
+  static constexpr double alpha = 0.9;
+  static constexpr double epsilon = 0.00000001;
+  static constexpr size_t sdIterations = 5000;
+  static constexpr size_t initialDroneNumber = 40;
 
   size_t conflicts(const CourseSolution& s) { return problem.conflicts(s); }
 
@@ -71,6 +68,21 @@ class HbmoEtp {
     }
     queen.body = *best;
   }
+
+  void calculate_course_conflicts();
+  void create_drone_population();  
+  size_t compare_conflicts(size_t cq, size_t cb);
+  CourseSolution generate_brood(const CourseSolution& a,
+                                       const CourseSolution& b);
+  void simple_descent(Bee& brood);
+  void  shake_kempe_chain();
+  std::pair<std::set<int>, std::set<int>> get_kempe_chain(const CourseSolution& brood, unsigned T1, unsigned T2);
+  bool find_room(int course, const vector<int>& slot, size_t& result);
+  std::tuple<CourseSolution, size_t, size_t> random_select_drone();
+  void slotCrossover(CourseSolution& result, const vector<int>& aSlot,
+                            const vector<int>& bSlot, vector<int>& resultSlot);
+  bool conflicts_with(int course, const vector<int>& slot);
+  void heuristic_sort(const CourseSolution& sln, std::deque<int>& courses);
 };
 
 #endif
