@@ -2,17 +2,17 @@
 #define HBMO_ETP_H
 
 #include <course_timetabling.h>
-#include <utility>
+#include <deque>
 #include <set>
 #include <tuple>
-#include <deque>
+#include <utility>
 
 class Queen {
  public:
   using Bee = CourseSolution;
   static constexpr int spermLimit = 10;
 
-  Queen(const TimetablingProblem& ttp): body(ttp) {}
+  Queen(const TimetablingProblem& ttp) : body(ttp) {}
   size_t sperm_count() const { return sperms.size(); }
   void add_sperm(Bee& sperm) { sperms.push_back(sperm); }
   void clear_sperms() { sperms.clear(); }
@@ -24,7 +24,8 @@ class HbmoEtp {
  public:
   using Bee = Queen::Bee;
 
-  HbmoEtp(const TimetablingProblem& problem) : problem(problem), queen(problem) {
+  HbmoEtp(const TimetablingProblem& problem)
+      : problem(problem), queen(problem) {
     calculate_course_conflicts();
   }
 
@@ -32,6 +33,7 @@ class HbmoEtp {
 
   vector<size_t> m_feasible_timeslots(const CourseSolution& sln, int course);
   int m_course_conflicts(int course);
+
  private:
   const TimetablingProblem& problem;
   Queen queen;
@@ -70,17 +72,18 @@ class HbmoEtp {
   }
 
   void calculate_course_conflicts();
-  void create_drone_population();  
+  void create_drone_population();
   size_t compare_conflicts(size_t cq, size_t cb);
   CourseSolution generate_brood(const CourseSolution& a,
-                                       const CourseSolution& b);
+                                const CourseSolution& b);
   void simple_descent(Bee& brood);
-  void  shake_kempe_chain();
-  std::pair<std::set<int>, std::set<int>> get_kempe_chain(const CourseSolution& brood, unsigned T1, unsigned T2);
+  void shake_kempe_chain();
+  std::pair<std::set<int>, std::set<int>> get_kempe_chain(
+      const CourseSolution& brood, unsigned T1, unsigned T2);
   bool find_room(int course, const vector<int>& slot, size_t& result);
   std::tuple<CourseSolution, size_t, size_t> random_select_drone();
   void slotCrossover(CourseSolution& result, const vector<int>& aSlot,
-                            const vector<int>& bSlot, vector<int>& resultSlot);
+                     const vector<int>& bSlot, vector<int>& resultSlot);
   bool conflicts_with(int course, const vector<int>& slot);
   void heuristic_sort(const CourseSolution& sln, std::deque<int>& courses);
 };

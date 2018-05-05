@@ -1,10 +1,10 @@
 #include <hbmo-etp.h>
 #include <random.h>
+#include <algorithm>
 #include <cmath>
 #include <deque>
-#include <set>
 #include <numeric>
-#include <algorithm>
+#include <set>
 
 using std::vector;
 using std::set;
@@ -74,7 +74,7 @@ CourseSolution HbmoEtp::run() {
     }
     shake_kempe_chain();
     // replace the selected drones with the new ones
-    for(size_t i = 0; i < broodPopulation.size(); ++i) {
+    for (size_t i = 0; i < broodPopulation.size(); ++i) {
       dronePopulation[*(selectedDrones.begin())] = broodPopulation[i];
       selectedDrones.erase(selectedDrones.begin());
     }
@@ -88,8 +88,8 @@ CourseSolution HbmoEtp::run() {
 
 // shake each brood with the kempe chain
 void HbmoEtp::shake_kempe_chain() {
-  for(auto&& brood: broodPopulation) {
-    retry:
+  for (auto&& brood : broodPopulation) {
+  retry:
     // choose random timeslots
     unsigned T1 = snt_rand(CourseSolution::slotCount);
     unsigned T2 = snt_rand(CourseSolution::slotCount - 1);
@@ -97,24 +97,24 @@ void HbmoEtp::shake_kempe_chain() {
       ++T2;
     }
     // build kempe chain of conflicting lectures from both
-    auto&& [T1Lectures, T2Lectures] = get_kempe_chain(brood, T1, T2);
+    auto && [ T1Lectures, T2Lectures ] = get_kempe_chain(brood, T1, T2);
     auto&& slot1 = brood.slots()[T1];
     auto&& slot2 = brood.slots()[T2];
     // swap lectures
     // erase selected from their timeslots
-    for(auto&& room: brood.slots()[T1]) {
+    for (auto&& room : brood.slots()[T1]) {
       if (T1Lectures.count(room) != 0) {
         room = -1;
       }
     }
-    for(auto&& room: brood.slots()[T2]) {
+    for (auto&& room : brood.slots()[T2]) {
       if (T2Lectures.count(room) != 0) {
         room = -1;
       }
     }
     // place lectures to the new timeslot
     // if a room cannot be assigned, try selecting different timeslots
-    for(auto&& course: T1Lectures) {
+    for (auto&& course : T1Lectures) {
       size_t room = 0;
       if (!find_room(course, slot2, room)) {
         goto retry;
@@ -122,7 +122,7 @@ void HbmoEtp::shake_kempe_chain() {
       slot2[room] = course;
     }
 
-    for(auto&& course: T2Lectures) {
+    for (auto&& course : T2Lectures) {
       size_t room = 0;
       if (!find_room(course, slot1, room)) {
         goto retry;
@@ -132,7 +132,8 @@ void HbmoEtp::shake_kempe_chain() {
   }
 }
 
-std::pair<set<int>, set<int>> HbmoEtp::get_kempe_chain(const CourseSolution& brood, unsigned T1, unsigned T2) {
+std::pair<set<int>, set<int>> HbmoEtp::get_kempe_chain(
+    const CourseSolution& brood, unsigned T1, unsigned T2) {
   auto&& slot1 = brood.slots()[T1];
   auto&& slot2 = brood.slots()[T2];
 
@@ -143,10 +144,10 @@ std::pair<set<int>, set<int>> HbmoEtp::get_kempe_chain(const CourseSolution& bro
   vector<unsigned> T1Selections(slot1.size());
   std::iota(T1Selections.begin(), T1Selections.end(), 0);
 
-  while(true) {
+  while (true) {
     if (T1Selections.empty()) {
       // slot1 is empty, just place every event from slot2 to slot1
-      for(auto&& course: slot2) {
+      for (auto&& course : slot2) {
         if (course != -1) {
           T2Chain.insert(course);
         }
@@ -165,12 +166,12 @@ std::pair<set<int>, set<int>> HbmoEtp::get_kempe_chain(const CourseSolution& bro
   size_t T1Size = 1;
   size_t T2Size = 0;
 
-  while(T1Size != T1Chain.size() || T2Size != T2Chain.size()) {
+  while (T1Size != T1Chain.size() || T2Size != T2Chain.size()) {
     T1Size = T1Chain.size();
     T2Size = T2Chain.size();
 
-    for(auto&& course: T1Chain) {
-      for(auto&& course2: slot2) {
+    for (auto&& course : T1Chain) {
+      for (auto&& course2 : slot2) {
         if (course2 == -1) {
           continue;
         }
@@ -180,8 +181,8 @@ std::pair<set<int>, set<int>> HbmoEtp::get_kempe_chain(const CourseSolution& bro
       }
     }
 
-    for(auto&& course: T2Chain) {
-      for(auto&& course2: slot1) {
+    for (auto&& course : T2Chain) {
+      for (auto&& course2 : slot1) {
         if (course2 == -1) {
           continue;
         }
@@ -212,24 +213,25 @@ CourseSolution HbmoEtp::generate_brood(const CourseSolution& a,
                                        const CourseSolution& b) {
   vector<unsigned> slotPool1{CourseSolution::slotCount};
   std::iota(slotPool1.begin(), slotPool1.end(), 0);
-  vector<unsigned> slotPool2 {slotPool1};
+  vector<unsigned> slotPool2{slotPool1};
   // pick 8 different timeslots from each parent
   std::array<unsigned, 8> T1;
   std::array<unsigned, 8> T2;
-  for(unsigned& t: T1) {
+  for (unsigned& t : T1) {
     size_t i = snt_rand((unsigned)slotPool1.size());
     t = slotPool1[i];
     slotPool1.erase(slotPool1.begin() + i);
   }
-  for(unsigned& t: T2) {
+  for (unsigned& t : T2) {
     size_t i = snt_rand((unsigned)slotPool2.size());
     t = slotPool2[i];
     slotPool1.erase(slotPool2.begin() + i);
   }
   CourseSolution result{a};
 
-  for(size_t i = 0; i < T1.size(); ++i) {
-    slotCrossover(result, a.slots()[T1[i]], b.slots()[T1[i]], result.slots()[T1[i]]);
+  for (size_t i = 0; i < T1.size(); ++i) {
+    slotCrossover(result, a.slots()[T1[i]], b.slots()[T1[i]],
+                  result.slots()[T1[i]]);
   }
 
   return result;
@@ -249,28 +251,27 @@ void HbmoEtp::slotCrossover(CourseSolution& result, const vector<int>& aSlot,
     }
     // do not move if causes conflict
     // 1) check for conflicts
-    if(conflicts_with(bCourse, aSlot)) {
+    if (conflicts_with(bCourse, aSlot)) {
       continue;
-		}
-		// 2) find a suitable room
-		size_t room;
-		if (!find_room(bCourse, resultSlot, room)) {
+    }
+    // 2) find a suitable room
+    size_t room;
+    if (!find_room(bCourse, resultSlot, room)) {
       continue;
-		}
+    }
 
-		// erase the event from the other timeslot
-		for(auto&& slot: result.slots()) {
+    // erase the event from the other timeslot
+    for (auto&& slot : result.slots()) {
       for (auto&& course : slot) {
         if (course == bCourse) {
           course = -1;
         }
       }
-		}
-		// place the event
-		resultSlot[room] = bCourse;
-		// hack for "continue 2;", please C++20 add this feature
-		continueLabel:
-    ;
+    }
+    // place the event
+    resultSlot[room] = bCourse;
+  // hack for "continue 2;", please C++20 add this feature
+  continueLabel:;
   }
 }
 
@@ -301,13 +302,14 @@ bool HbmoEtp::find_room(int course, const vector<int>& slot, size_t& result) {
       }
     }
     ret = true;
-    if (problem.rooms()[i].size() < minCapacity || (problem.rooms()[i].size() == minCapacity && roomFeatures < minFeatures)) {
+    if (problem.rooms()[i].size() < minCapacity ||
+        (problem.rooms()[i].size() == minCapacity &&
+         roomFeatures < minFeatures)) {
       minCapacity = problem.rooms()[i].size();
       minFeatures = roomFeatures;
       result = i;
     }
-  continueLabel:
-  ;
+  continueLabel:;
   }
   return ret;
 }
@@ -351,14 +353,14 @@ void HbmoEtp::simple_descent(Bee& brood) {
       ++tSlotTarget;
     }
     // try to assign to that timeslot
-    if(conflicts_with(selectedCourse, brood.slots()[tSlotTarget])) {
+    if (conflicts_with(selectedCourse, brood.slots()[tSlotTarget])) {
       continue;
-		}
-		// 2) find a suitable room
-		size_t room;
-		if (!find_room(selectedCourse, brood.slots()[tSlotTarget], room)) {
+    }
+    // 2) find a suitable room
+    size_t room;
+    if (!find_room(selectedCourse, brood.slots()[tSlotTarget], room)) {
       continue;
-		}
+    }
     Bee temp{brood};
     // place the event and erase if from the original place
     temp.slots()[tSlotSource][tRoomSource] = -1;
@@ -379,11 +381,11 @@ void HbmoEtp::create_drone_population() {
   heuristic_sort(emptySolution, courses);
 
   // generate the drones by randomly assigning to a timeslot
-  for(size_t i = 0; i < initialDroneNumber; ++i) {
+  for (size_t i = 0; i < initialDroneNumber; ++i) {
   restartLabel:
     CourseSolution s{emptySolution};
     std::deque<int> c{courses};
-    while(!c.empty()) {
+    while (!c.empty()) {
       auto selected = c.front();
       c.pop_front();
       auto slots = m_feasible_timeslots(s, selected);
@@ -411,24 +413,32 @@ int feasible_timeslots(HbmoEtp& hbmo, const CourseSolution& sln, int course) {
   return hbmo.m_feasible_timeslots(sln, course).size();
 }
 
-void HbmoEtp::heuristic_sort(const CourseSolution& sln, std::deque<int>& courses) {
+void HbmoEtp::heuristic_sort(const CourseSolution& sln,
+                             std::deque<int>& courses) {
   // lowest priority sort: largest number of students first
-  std::sort(courses.begin(), courses.end(), [&](int a, int b) {return problem.courses()[a].students > problem.courses()[b].students;});
+  std::sort(courses.begin(), courses.end(), [&](int a, int b) {
+    return problem.courses()[a].students > problem.courses()[b].students;
+  });
   // middle priority sort: highest number of conflicts first
-  std::stable_sort(courses.begin(), courses.end(), [&](int a, int b) {return course_conflicts(*this, a) > course_conflicts(*this, b);});
+  std::stable_sort(courses.begin(), courses.end(), [&](int a, int b) {
+    return course_conflicts(*this, a) > course_conflicts(*this, b);
+  });
   // high priority sort: lowest number of feasible timeslots
-  std::stable_sort(courses.begin(), courses.end(), [&](int a, int b) {return feasible_timeslots(*this, sln, a) < feasible_timeslots(*this, sln, b);});
+  std::stable_sort(courses.begin(), courses.end(), [&](int a, int b) {
+    return feasible_timeslots(*this, sln, a) <
+           feasible_timeslots(*this, sln, b);
+  });
 }
 
 int HbmoEtp::m_course_conflicts(int course) {
   // count the number of events this event has common students with
   set<int> conflictingClasses;
-  for(auto&& student: problem.students()) {
+  for (auto&& student : problem.students()) {
     if (!student.attendance()[course]) {
       continue;
     }
-    for(size_t i = 0; i < student.attendance().size(); ++i) {
-      if(student.attendance()[i]) {
+    for (size_t i = 0; i < student.attendance().size(); ++i) {
+      if (student.attendance()[i]) {
         conflictingClasses.insert(i);
       }
     }
@@ -437,14 +447,16 @@ int HbmoEtp::m_course_conflicts(int course) {
   return conflictingClasses.size() - 1;
 }
 
-vector<size_t> HbmoEtp::m_feasible_timeslots(const CourseSolution& sln, int course) {
+vector<size_t> HbmoEtp::m_feasible_timeslots(const CourseSolution& sln,
+                                             int course) {
   vector<size_t> r;
-  for(size_t i = 0; i < sln.slots().size(); ++i) {
+  for (size_t i = 0; i < sln.slots().size(); ++i) {
     size_t dummy;
     auto&& timeslot = sln.slots()[i];
-    if(!conflicts_with(course, timeslot) && find_room(course, timeslot, dummy)) {
+    if (!conflicts_with(course, timeslot) &&
+        find_room(course, timeslot, dummy)) {
       r.push_back(i);
-		}
+    }
   }
   return r;
 }

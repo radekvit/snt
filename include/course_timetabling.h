@@ -2,9 +2,8 @@
 #define SNT_COURSE_TIMETABLING_H
 #include <array>
 #include <cstdint>
-#include <vector>
 #include <iostream>
-
+#include <vector>
 
 class TimetablingProblem;
 
@@ -72,8 +71,10 @@ class Course {
 
  private:
   vector<bool> requiredFeatures_;
-  friend int course_conflicts(HbmoEtp& hbmo, const CourseSolution& sln, int course);
-  friend int feasible_timeslots(HbmoEtp& hbmo, const CourseSolution& sln, int course);
+  friend int course_conflicts(HbmoEtp& hbmo, const CourseSolution& sln,
+                              int course);
+  friend int feasible_timeslots(HbmoEtp& hbmo, const CourseSolution& sln,
+                                int course);
 };
 
 using std::vector;
@@ -82,7 +83,6 @@ using std::cin;
 
 class TimetablingProblem {
  public:
-
   TimetablingProblem() { read_from_stdin(); }
 
   // helper for studentAvailibility indexing
@@ -95,7 +95,8 @@ class TimetablingProblem {
   // modified implementation of checksln.cpp
   size_t conflicts(const CourseSolution& s) const {
     size_t softConflicts = 0;
-    vector<bool> studentAvailability(students_.size() * CourseSolution::slotCount, true );
+    vector<bool> studentAvailability(
+        students_.size() * CourseSolution::slotCount, true);
     // get student availibility
     for (size_t sl = 0; sl < CourseSolution::slotCount; ++sl) {
       auto&& slot = s.slots()[sl];
