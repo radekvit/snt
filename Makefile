@@ -1,4 +1,4 @@
-CXX=g++-7.2
+CXX=g++-7.3
 APPNAME=snt
 TESTER=tester
 INCLUDE=include
