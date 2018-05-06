@@ -16,7 +16,7 @@ OBJFILES=$(patsubst $(SRC)/%.cpp,$(OBJ)/%.o,$(wildcard $(SRC)/*.cpp))
 all: deploy $(TESTER)
 
 $(TESTER): checksln.cpp
-	g++-7.2 -std=c++17 -O3 checksln.cpp -o $(TESTER)
+	$(CXX) -std=c++17 -O3 checksln.cpp -o $(TESTER)
 
 init:
 	git submodule init
