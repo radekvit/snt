@@ -1,12 +1,17 @@
-#include <fstream.h>
-#include <iostream.h>
+#include <fstream>
+#include <iostream>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
-main(int argc, char* argv[]) {
+using std::cout;
+using std::cin;
+using std::endl;
+using std::ifstream;
+
+int main(int argc, char* argv[]) {
   int norooms, nostudents, noevents;
   int nofeatures;
 
@@ -29,7 +34,7 @@ main(int argc, char* argv[]) {
     cin.get(key);
     exit(0);
   }
-  sscanf(argv[1], "%s", &filename);
+  sscanf(argv[1], "%s", (char*)&filename);
 
   int len = strlen(filename);
 
@@ -281,7 +286,6 @@ main(int argc, char* argv[]) {
   for (int i = 0; i < nofeatures; i++)
     delete[] eventfeatures[i];
   delete[] eventfeatures;
-  cout << "Press return to continue" << endl;
-  char key;
-  cin.get(key);
+
+  return longintensive + single + endofday;
 }

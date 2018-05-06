@@ -207,9 +207,9 @@ class TimetablingProblem {
         coursesAttendance[j] += attending;
         attendance.push_back(attending);
       }
-      students_.push_back(attendance);
+
+      students_.push_back({attendance});
     }
-    std::cout << __FILE__ << ": " << __LINE__ << "\n";
     // room-feature
     bool hasFeature;
     for (size_t i = 0; i < rooms; ++i) {

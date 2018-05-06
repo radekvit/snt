@@ -1,6 +1,7 @@
 #include <hbmo-etp.h>
 int main() {
-  HbmoEtp solver({});
+  TimetablingProblem tp;
+  HbmoEtp solver(tp);
   solver.run().print();
   return 0;
 }

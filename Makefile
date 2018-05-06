@@ -1,8 +1,9 @@
 CXX=g++-7.2
 APPNAME=snt
+TESTER=tester
 INCLUDE=include
 SRC=src
-CXXFLAGS += -std=c++17 -Wall -Wextra -pedantic -I. -I $(INCLUDE) -I $(SRC) -I $(LIBINCLUDE)
+CXXFLAGS += -std=c++17 -Wall -Wextra -pedantic -I. -I $(INCLUDE) -I $(SRC)
 OBJ=obj
 DOC = docs
 $(shell mkdir -p $(OBJ))
@@ -12,7 +13,10 @@ OBJFILES=$(patsubst $(SRC)/%.cpp,$(OBJ)/%.o,$(wildcard $(SRC)/*.cpp))
 
 .PHONY: all format clean debug build test pack doc run libbuild cleanall
 
-all: deploy
+all: deploy $(TESTER)
+
+$(TESTER): checksln.cpp
+	g++-7.2 -std=c++17 -O3 checksln.cpp -o $(TESTER)
 
 init:
 	git submodule init
@@ -20,7 +24,7 @@ init:
 
 build: $(APPNAME)
 
-debug: CXXFLAGS+=-g -O0
+debug: CXXFLAGS+=-g -pg -O0
 debug: build
 
 deploy: CXXFLAGS+=-O3 -DNDEBUG

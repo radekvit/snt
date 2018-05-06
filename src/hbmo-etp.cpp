@@ -33,12 +33,13 @@ CourseSolution HbmoEtp::run() {
   // number of broods = 10
   // number of selected crossover genes = 8
   // simple descent iterations = 5000
-  constexpr size_t matingFlights = 10'000;
+  constexpr size_t matingFlights = 100;
+  constexpr size_t conflictThreshold = 0;
   create_drone_population();
   calculate_drones_conflicts();
   select_queen();
   // mating flight
-  for (size_t i = 0; i < matingFlights; ++i) {
+  for (size_t i = 0; i < matingFlights && queenConflicts > conflictThreshold; ++i) {
     set<size_t> selectedDrones;
     double energy = snt_rand(0.5, 1.0);
     size_t t = 0;
@@ -211,9 +212,9 @@ std::tuple<CourseSolution, size_t, size_t> HbmoEtp::random_select_drone() {
 
 CourseSolution HbmoEtp::generate_brood(const CourseSolution& a,
                                        const CourseSolution& b) {
-  vector<unsigned> slotPool1{CourseSolution::slotCount};
+  vector<unsigned> slotPool1(CourseSolution::slotCount);
   std::iota(slotPool1.begin(), slotPool1.end(), 0);
-  vector<unsigned> slotPool2{slotPool1};
+  vector<unsigned> slotPool2(slotPool1);
   // pick 8 different timeslots from each parent
   std::array<unsigned, 8> T1;
   std::array<unsigned, 8> T2;
@@ -225,7 +226,7 @@ CourseSolution HbmoEtp::generate_brood(const CourseSolution& a,
   for (unsigned& t : T2) {
     size_t i = snt_rand((unsigned)slotPool2.size());
     t = slotPool2[i];
-    slotPool1.erase(slotPool2.begin() + i);
+    slotPool2.erase(slotPool2.begin() + i);
   }
   CourseSolution result{a};
 
@@ -375,7 +376,7 @@ void HbmoEtp::simple_descent(Bee& brood) {
 void HbmoEtp::create_drone_population() {
   dronePopulation.clear();
   CourseSolution emptySolution{problem};
-  std::deque<int> courses(problem.nCourses);
+  std::deque<int> courses(problem.nCourses, 0);
   std::iota(courses.begin(), courses.end(), 0);
 
   heuristic_sort(emptySolution, courses);
@@ -416,13 +417,15 @@ int feasible_timeslots(HbmoEtp& hbmo, const CourseSolution& sln, int course) {
 void HbmoEtp::heuristic_sort(const CourseSolution& sln,
                              std::deque<int>& courses) {
   // lowest priority sort: largest number of students first
-  std::sort(courses.begin(), courses.end(), [&](int a, int b) {
+  auto studentCount = [&](int a, int b) {
     return problem.courses()[a].students > problem.courses()[b].students;
-  });
+  };
+  std::sort(courses.begin(), courses.end(), studentCount);
   // middle priority sort: highest number of conflicts first
-  std::stable_sort(courses.begin(), courses.end(), [&](int a, int b) {
-    return course_conflicts(*this, a) > course_conflicts(*this, b);
-  });
+  auto conflictL = [&](int a, int b) {
+    return m_course_conflicts(a) > m_course_conflicts(b);
+  };
+  std::stable_sort(courses.begin(), courses.end(), conflictL);
   // high priority sort: lowest number of feasible timeslots
   std::stable_sort(courses.begin(), courses.end(), [&](int a, int b) {
     return feasible_timeslots(*this, sln, a) <
