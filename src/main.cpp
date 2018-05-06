@@ -1,4 +1,5 @@
 #include <hbmo-etp.h>
+
 int main() {
   TimetablingProblem tp;
   HbmoEtp solver(tp);

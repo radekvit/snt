@@ -25,7 +25,7 @@ class HbmoEtp {
   using Bee = Queen::Bee;
 
   HbmoEtp(const TimetablingProblem& problem)
-      : problem(problem), queen(problem) {
+      : queen(problem), problem(problem) {
     calculate_course_conflicts();
   }
 
@@ -34,9 +34,10 @@ class HbmoEtp {
   vector<size_t> m_feasible_timeslots(const CourseSolution& sln, int course);
   int m_course_conflicts(int course);
 
+  Queen queen;
+  size_t iteration = 0;
  private:
   const TimetablingProblem& problem;
-  Queen queen;
   size_t queenConflicts;
 
   vector<Bee> dronePopulation;

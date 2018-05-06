@@ -33,13 +33,20 @@ CourseSolution HbmoEtp::run() {
   // number of broods = 10
   // number of selected crossover genes = 8
   // simple descent iterations = 5000
-  constexpr size_t matingFlights = 100;
+  constexpr size_t matingFlights = 10'000;
   constexpr size_t conflictThreshold = 0;
+  size_t lastConflicts = 0;
   create_drone_population();
+  std::cerr << "Finished creating initial population\n";
   calculate_drones_conflicts();
   select_queen();
   // mating flight
-  for (size_t i = 0; i < matingFlights && queenConflicts > conflictThreshold; ++i) {
+  for (iteration = 0; iteration < matingFlights && queenConflicts > conflictThreshold; ++iteration) {
+    if( lastConflicts != queenConflicts) {
+      std::cerr << "mating iteration " << iteration << "; best penalty " << queenConflicts << "\n";
+      lastConflicts = queenConflicts;
+    }
+    
     set<size_t> selectedDrones;
     double energy = snt_rand(0.5, 1.0);
     size_t t = 0;
@@ -76,13 +83,16 @@ CourseSolution HbmoEtp::run() {
     shake_kempe_chain();
     // replace the selected drones with the new ones
     for (size_t i = 0; i < broodPopulation.size(); ++i) {
-      dronePopulation[*(selectedDrones.begin())] = broodPopulation[i];
+      size_t j = *(selectedDrones.begin());
+      droneConflicts[j] = conflicts(broodPopulation[i]);
+      dronePopulation[j].swap(broodPopulation[i]);
       selectedDrones.erase(selectedDrones.begin());
     }
-    calculate_drones_conflicts();
     broodPopulation.clear();
     queen.clear_sperms();
   }
+
+  std::cerr << "Done. Result penalty is " << queenConflicts << "\n";
 
   return queen.body;
 }
@@ -384,6 +394,7 @@ void HbmoEtp::create_drone_population() {
   // generate the drones by randomly assigning to a timeslot
   for (size_t i = 0; i < initialDroneNumber; ++i) {
   restartLabel:
+    std::cerr << "creating initial solution " << i << "\n";
     CourseSolution s{emptySolution};
     std::deque<int> c{courses};
     while (!c.empty()) {
@@ -422,6 +433,7 @@ void HbmoEtp::heuristic_sort(const CourseSolution& sln,
   };
   std::sort(courses.begin(), courses.end(), studentCount);
   // middle priority sort: highest number of conflicts first
+  // TODO save this locally instead of counting every time
   auto conflictL = [&](int a, int b) {
     return m_course_conflicts(a) > m_course_conflicts(b);
   };
