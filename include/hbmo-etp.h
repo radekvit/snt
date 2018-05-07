@@ -10,7 +10,6 @@
 class Queen {
  public:
   using Bee = CourseSolution;
-  static constexpr int spermLimit = 10;
 
   Queen(const TimetablingProblem& ttp) : body(ttp) {}
   size_t sperm_count() const { return sperms.size(); }
@@ -45,10 +44,6 @@ class HbmoEtp {
   vector<bool> courseConflicts;
 
   vector<Bee> broodPopulation;
-  static constexpr double alpha = 0.9;
-  static constexpr double epsilon = 0.00000001;
-  static constexpr size_t sdIterations = 5000;
-  static constexpr size_t initialDroneNumber = 40;
 
   size_t conflicts(const CourseSolution& s) { return problem.conflicts(s); }
 
@@ -87,6 +82,7 @@ class HbmoEtp {
                      const vector<int>& bSlot, vector<int>& resultSlot);
   bool conflicts_with(int course, const vector<int>& slot);
   void heuristic_sort(const CourseSolution& sln, std::deque<int>& courses);
+  void heuristic_sort_low_prio(std::deque<int>& courses);
 };
 
 #endif

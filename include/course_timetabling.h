@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <iostream>
 #include <vector>
+#include <config.h>
 
 class TimetablingProblem;
 

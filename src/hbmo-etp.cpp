@@ -27,16 +27,11 @@ void HbmoEtp::calculate_course_conflicts() {
 
 CourseSolution HbmoEtp::run() {
   using std::exp;
-  // number of drones = 40
-  // max mating flights = 10'000
-  // size of spermtheca = 10
-  // number of broods = 10
-  // number of selected crossover genes = 8
-  // simple descent iterations = 5000
-  constexpr size_t matingFlights = 10'000;
-  constexpr size_t conflictThreshold = 0;
+
   size_t lastConflicts = 0;
   create_drone_population();
+  broodPopulation.reserve(queenSpermLimit * 4);
+  
   std::cerr << "Finished creating initial population\n";
   calculate_drones_conflicts();
   select_queen();
@@ -46,41 +41,50 @@ CourseSolution HbmoEtp::run() {
       std::cerr << "mating iteration " << iteration << "; best penalty " << queenConflicts << "\n";
       lastConflicts = queenConflicts;
     }
-    
-    set<size_t> selectedDrones;
+    //set<size_t> selectedDrones;
     double energy = snt_rand(0.5, 1.0);
     size_t t = 0;
 
-    while (energy > epsilon && queen.sperm_count() < Queen::spermLimit) {
+    if(dronePopulation.size() == 0) {
+      break;
+    }
+
+    while (energy > epsilon && queen.sperm_count() < queenSpermLimit) {
       auto && [ drone, sdroneConflicts, i ] = random_select_drone();
-      if (selectedDrones.count(i)) {
+      /*if (selectedDrones.count(i)) {
         // try again
         continue;
-      }
-      size_t conflicts_diff =
-          compare_conflicts(queenConflicts, sdroneConflicts);
+      }*/
+      size_t conflicts_diff = queenConflicts - sdroneConflicts;
       double r = snt_rand(0.0, 1.0);
       if (exp(-(conflicts_diff / energy)) < r) {
-        selectedDrones.insert(i);
+        //selectedDrones.insert(i);
         queen.add_sperm(drone);
       }
       ++t;
       energy *= alpha;
     }
-
     for (auto&& sperm : queen.sperms) {
       auto&& brood = generate_brood(queen.body, sperm);
       simple_descent(brood);
       size_t broodConflicts = conflicts(brood);
       if (broodConflicts < queenConflicts) {
-        queen.body = brood;
-        queenConflicts = broodConflicts;
-      } else {
-        // to population
-        broodPopulation.push_back(brood);
+        std::swap(queen.body, brood);
+        std::swap(queenConflicts, broodConflicts);
       }
+      // insert the brood to the brood pool
+      broodPopulation.push_back(brood);
     }
+    // kill all old drones and replace with shaken broods
+    // 4 times the broods
+    auto copy = broodPopulation;
+    std::copy(copy.begin(), copy.end(), std::back_inserter(broodPopulation));
+    copy = broodPopulation;
+    std::copy(copy.begin(), copy.end(), std::back_inserter(broodPopulation));
     shake_kempe_chain();
+    dronePopulation.swap(broodPopulation);
+    calculate_drones_conflicts();
+    /*
     // replace the selected drones with the new ones
     for (size_t i = 0; i < broodPopulation.size(); ++i) {
       size_t j = *(selectedDrones.begin());
@@ -88,6 +92,7 @@ CourseSolution HbmoEtp::run() {
       dronePopulation[j].swap(broodPopulation[i]);
       selectedDrones.erase(selectedDrones.begin());
     }
+    */
     broodPopulation.clear();
     queen.clear_sperms();
   }
@@ -225,9 +230,9 @@ CourseSolution HbmoEtp::generate_brood(const CourseSolution& a,
   vector<unsigned> slotPool1(CourseSolution::slotCount);
   std::iota(slotPool1.begin(), slotPool1.end(), 0);
   vector<unsigned> slotPool2(slotPool1);
-  // pick 8 different timeslots from each parent
-  std::array<unsigned, 8> T1;
-  std::array<unsigned, 8> T2;
+  // pick x different timeslots from each parent
+  std::array<unsigned, crossoverGenes> T1;
+  std::array<unsigned, crossoverGenes> T2;
   for (unsigned& t : T1) {
     size_t i = snt_rand((unsigned)slotPool1.size());
     t = slotPool1[i];
@@ -340,8 +345,7 @@ bool HbmoEtp::conflicts_with(int course, const vector<int>& slot) {
 void HbmoEtp::simple_descent(Bee& brood) {
   // randomly move an event to a random slot if possible; keep the change if it
   // improves the fitness
-  constexpr size_t dsIterations = 5000;
-  for (size_t i = 0; i < dsIterations; ++i) {
+  for (size_t i = 0; i < simpleDescentIterations; ++i) {
     // randomly select a course
     int selectedCourse = snt_rand(problem.nCourses);
     // find the event's timeslot
@@ -389,10 +393,15 @@ void HbmoEtp::create_drone_population() {
   std::deque<int> courses(problem.nCourses, 0);
   std::iota(courses.begin(), courses.end(), 0);
 
+  // we do these only once to save lots of time; potential reordering is insignificant as
+  // the number of feasible rooms changes by 1
+  // the number of tries is higher, but the speed increase would justify even
+  // ~3 tries on average per drone
+  heuristic_sort_low_prio(courses);
   heuristic_sort(emptySolution, courses);
 
   // generate the drones by randomly assigning to a timeslot
-  for (size_t i = 0; i < initialDroneNumber; ++i) {
+  for (size_t i = 0; i < droneNumber; ++i) {
   restartLabel:
     std::cerr << "creating initial solution " << i << "\n";
     CourseSolution s{emptySolution};
@@ -425,8 +434,7 @@ int feasible_timeslots(HbmoEtp& hbmo, const CourseSolution& sln, int course) {
   return hbmo.m_feasible_timeslots(sln, course).size();
 }
 
-void HbmoEtp::heuristic_sort(const CourseSolution& sln,
-                             std::deque<int>& courses) {
+void HbmoEtp::heuristic_sort_low_prio(std::deque<int>& courses) {
   // lowest priority sort: largest number of students first
   auto studentCount = [&](int a, int b) {
     return problem.courses()[a].students > problem.courses()[b].students;
@@ -438,6 +446,10 @@ void HbmoEtp::heuristic_sort(const CourseSolution& sln,
     return m_course_conflicts(a) > m_course_conflicts(b);
   };
   std::stable_sort(courses.begin(), courses.end(), conflictL);
+}
+
+void HbmoEtp::heuristic_sort(const CourseSolution& sln,
+                             std::deque<int>& courses) {
   // high priority sort: lowest number of feasible timeslots
   std::stable_sort(courses.begin(), courses.end(), [&](int a, int b) {
     return feasible_timeslots(*this, sln, a) <
