@@ -32,36 +32,32 @@ CourseSolution HbmoEtp::run() {
   create_drone_population();
   broodPopulation.reserve(queenSpermLimit * 4);
   
-  std::cerr << "Finished creating initial population\n";
+  std::cerr << "iteration\tconflicts\n";
   calculate_drones_conflicts();
   select_queen();
   // mating flight
   for (iteration = 0; iteration < matingFlights && queenConflicts > conflictThreshold; ++iteration) {
     if( lastConflicts != queenConflicts) {
-      std::cerr << "mating iteration " << iteration << "; best penalty " << queenConflicts << "\n";
+      std::cerr << iteration << "\t\t" << queenConflicts << "\n";
       lastConflicts = queenConflicts;
     }
-    //set<size_t> selectedDrones;
     double energy = snt_rand(0.5, 1.0);
-    size_t t = 0;
 
     if(dronePopulation.size() == 0) {
       break;
     }
 
     while (energy > epsilon && queen.sperm_count() < queenSpermLimit) {
-      auto && [ drone, sdroneConflicts, i ] = random_select_drone();
-      /*if (selectedDrones.count(i)) {
-        // try again
-        continue;
-      }*/
+      auto && [ drone, sdroneConflicts ] = random_select_drone();
       size_t conflicts_diff = queenConflicts - sdroneConflicts;
       double r = snt_rand(0.0, 1.0);
       if (exp(-(conflicts_diff / energy)) < r) {
-        //selectedDrones.insert(i);
         queen.add_sperm(drone);
+        // http://www.veterinaryhub.com/male-honey-bee-dies-during-sex/
+        // drone.testicles.explode();
+        // drone.do_a_backflip();
+        // drone.die();
       }
-      ++t;
       energy *= alpha;
     }
     for (auto&& sperm : queen.sperms) {
@@ -84,15 +80,7 @@ CourseSolution HbmoEtp::run() {
     shake_kempe_chain();
     dronePopulation.swap(broodPopulation);
     calculate_drones_conflicts();
-    /*
-    // replace the selected drones with the new ones
-    for (size_t i = 0; i < broodPopulation.size(); ++i) {
-      size_t j = *(selectedDrones.begin());
-      droneConflicts[j] = conflicts(broodPopulation[i]);
-      dronePopulation[j].swap(broodPopulation[i]);
-      selectedDrones.erase(selectedDrones.begin());
-    }
-    */
+
     broodPopulation.clear();
     queen.clear_sperms();
   }
@@ -220,9 +208,9 @@ size_t HbmoEtp::compare_conflicts(size_t cq, size_t cb) {
   }
 }
 
-std::tuple<CourseSolution, size_t, size_t> HbmoEtp::random_select_drone() {
+std::tuple<CourseSolution, size_t> HbmoEtp::random_select_drone() {
   auto i = snt_rand((unsigned)dronePopulation.size());
-  return {dronePopulation[i], droneConflicts[i], i};
+  return {dronePopulation[i], droneConflicts[i]};
 }
 
 CourseSolution HbmoEtp::generate_brood(const CourseSolution& a,
@@ -393,17 +381,17 @@ void HbmoEtp::create_drone_population() {
   std::deque<int> courses(problem.nCourses, 0);
   std::iota(courses.begin(), courses.end(), 0);
 
-  // we do these only once to save lots of time; potential reordering is insignificant as
-  // the number of feasible rooms changes by 1
-  // the number of tries is higher, but the speed increase would justify even
-  // ~3 tries on average per drone
-  heuristic_sort_low_prio(courses);
-  heuristic_sort(emptySolution, courses);
+  vector<vector<size_t>> feasibleTimeslots(problem.nCourses, vector<size_t>());
+  std::vector<size_t> courseConflicts(problem.nCourses, 0);
+  for(auto&& course: courses) {
+    courseConflicts[course] = m_course_conflicts(course);
+  }
+  heuristic_sort(emptySolution, courses, feasibleTimeslots, courseConflicts);
 
   // generate the drones by randomly assigning to a timeslot
+  std::cerr << "Creating initial solutions.\n";
   for (size_t i = 0; i < droneNumber; ++i) {
   restartLabel:
-    std::cerr << "creating initial solution " << i << "\n";
     CourseSolution s{emptySolution};
     std::deque<int> c{courses};
     while (!c.empty()) {
@@ -420,41 +408,33 @@ void HbmoEtp::create_drone_population() {
       // always succeeds
       find_room(selected, s.slots()[slot], room);
       s.slots()[slot][room] = selected;
-      heuristic_sort(s, c);
+      heuristic_sort(s, c, feasibleTimeslots, courseConflicts);
     }
     dronePopulation.push_back(s);
   }
-}
-
-int course_conflicts(HbmoEtp& hbmo, int course) {
-  return hbmo.m_course_conflicts(course);
-}
-
-int feasible_timeslots(HbmoEtp& hbmo, const CourseSolution& sln, int course) {
-  return hbmo.m_feasible_timeslots(sln, course).size();
-}
-
-void HbmoEtp::heuristic_sort_low_prio(std::deque<int>& courses) {
-  // lowest priority sort: largest number of students first
-  auto studentCount = [&](int a, int b) {
-    return problem.courses()[a].students > problem.courses()[b].students;
-  };
-  std::sort(courses.begin(), courses.end(), studentCount);
-  // middle priority sort: highest number of conflicts first
-  // TODO save this locally instead of counting every time
-  auto conflictL = [&](int a, int b) {
-    return m_course_conflicts(a) > m_course_conflicts(b);
-  };
-  std::stable_sort(courses.begin(), courses.end(), conflictL);
+  std::cerr << "Done creating initial solutions.\n";
+  
 }
 
 void HbmoEtp::heuristic_sort(const CourseSolution& sln,
-                             std::deque<int>& courses) {
-  // high priority sort: lowest number of feasible timeslots
-  std::stable_sort(courses.begin(), courses.end(), [&](int a, int b) {
-    return feasible_timeslots(*this, sln, a) <
-           feasible_timeslots(*this, sln, b);
-  });
+                             std::deque<int>& courses, vector<vector<size_t>>& feasibleTimeslots, const std::vector<size_t>& courseConflicts) {
+  for(auto course: courses) {
+    feasibleTimeslots[course] = m_feasible_timeslots(sln, course);
+  }
+  auto compare = [&](int a, int b) {
+    auto ft1 = feasibleTimeslots[a].size();
+    auto ft2 = feasibleTimeslots[b].size();
+    if (ft1 == ft2) {
+      auto cc1 = courseConflicts[a];
+      auto cc2 = courseConflicts[b];
+      if (cc1 == cc2) {
+        return problem.courses()[a].students > problem.courses()[b].students;
+      }
+      return cc1 > cc2;
+    }
+    return ft1 < ft2;
+  };
+  std::stable_sort(courses.begin(), courses.end(), compare);
 }
 
 int HbmoEtp::m_course_conflicts(int course) {
@@ -471,7 +451,7 @@ int HbmoEtp::m_course_conflicts(int course) {
     }
   }
   // always conflicts with itself
-  return conflictingClasses.size() - 1;
+  return conflictingClasses.size();
 }
 
 vector<size_t> HbmoEtp::m_feasible_timeslots(const CourseSolution& sln,

@@ -16,7 +16,7 @@ inline constexpr double epsilon = 0.0000001;
 
 inline constexpr size_t droneNumber = 40;
 // I don't have 4 hours for each run
-inline constexpr size_t matingFlights = 5'000;
+inline constexpr size_t matingFlights = 2'000;
 inline constexpr int queenSpermLimit = 10;
 inline constexpr size_t crossoverGenes = 8;
 inline constexpr size_t simpleDescentIterations = 5000;

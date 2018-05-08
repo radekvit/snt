@@ -35,6 +35,7 @@ class HbmoEtp {
 
   Queen queen;
   size_t iteration = 0;
+
  private:
   const TimetablingProblem& problem;
   size_t queenConflicts;
@@ -77,12 +78,13 @@ class HbmoEtp {
   std::pair<std::set<int>, std::set<int>> get_kempe_chain(
       const CourseSolution& brood, unsigned T1, unsigned T2);
   bool find_room(int course, const vector<int>& slot, size_t& result);
-  std::tuple<CourseSolution, size_t, size_t> random_select_drone();
+  std::tuple<CourseSolution, size_t> random_select_drone();
   void slotCrossover(CourseSolution& result, const vector<int>& aSlot,
                      const vector<int>& bSlot, vector<int>& resultSlot);
   bool conflicts_with(int course, const vector<int>& slot);
-  void heuristic_sort(const CourseSolution& sln, std::deque<int>& courses);
-  void heuristic_sort_low_prio(std::deque<int>& courses);
+  void heuristic_sort(const CourseSolution& sln, std::deque<int>& courses,
+                      vector<vector<size_t>>& feasibleTimeslots,
+                      const std::vector<size_t>& courseConflicts);
 };
 
 #endif

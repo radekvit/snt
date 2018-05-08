@@ -1,10 +1,10 @@
 #ifndef SNT_COURSE_TIMETABLING_H
 #define SNT_COURSE_TIMETABLING_H
+#include <config.h>
 #include <array>
 #include <cstdint>
 #include <iostream>
 #include <vector>
-#include <config.h>
 
 class TimetablingProblem;
 
