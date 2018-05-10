@@ -1,0 +1,159 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[czech]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{mathtools}
+\usepackage{listings}
+\usepackage{color}
+\PassOptionsToPackage{hyphens}{url}\usepackage{hyperref}
+
+\usepackage{calrsfs}
+
+\definecolor{light-gray}{gray}{0.85}
+\lstset{
+    numbers=left,
+    breaklines=true,
+    backgroundcolor=\color{light-gray},
+    tabsize=2,
+    basicstyle=\ttfamily,
+}
+
+\DeclareMathAlphabet{\pazocal}{OMS}{zplm}{m}{n}
+
+\newcommand{\Lb}{\pazocal{L}}
+
+%define Input and Output commands in algorithmicx
+\algnewcommand\algorithmicinput{\textbf{Vstup:}}
+\algnewcommand\Input{\item[\algorithmicinput]}
+
+\algnewcommand\algorithmicoutput{\textbf{Výstup:}}
+\algnewcommand\Output{\item[\algorithmicoutput]}
+
+\let\oldemptyset\emptyset
+\let\emptyset\varnothing
+\let\oldepsilon\epsilon
+\let\epsilon\varepsilon
+\let\emptystring\varepsilon
+
+\def\CC{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
+\def\CS{{\settoheight{\dimen0}{C}C\kern-.05em \resizebox{!}{\dimen0}{\raisebox{\depth}{\#}}}}
+
+\author{Radek Vít\\ \texttt{xvitra00}}
+\title{
+	\includegraphics[scale=0.6]{FIT_barevne_PANTONE_CZ.pdf}\\
+	SNT\\
+	University Course Timetabling Problem:\\ Optimalizace pomocí algoritmu páření včel
+}
+
+\begin{document}
+\newpage
+\maketitle
+
+\section{Úvod}
+% proc tato prace
+% muj prinos
+% v jakem prostredi
+\section{Popis problému}
+Problém rozvrhnutí univerzitních přednášek je definovaný jako %TODO citace z HoneyBee
+přiřazení daného počtu přednášek (také courses) do daného počtu vyučovacích hodin (také timeslots) a místností,
+kde je splněná množina tvrdých omezení. %citovat Socha
+V této práci se zaměřuji na tento konkrétní model úlohy, kterou tvoří:
+\begin{itemize}
+  \item množina přednášek $c_i$, $(i = 0, \dots, C)$
+  \item množina vyučovacích hodin $t_n$, $(n = 0, \dots, 45)$ (9 pro každý den)
+  \item množina místností $r_j$, $(j = 0, \dots, R)$
+  \item množina vlastností místností $F$
+  \item množina studentů $S$
+\end{itemize}
+Úlohou je přiřadit každou přednášku $c_i$ do hodiny $t_n$ a místnosti $r_j$ tak, aby byla splněna následující tvrdá omezení:
+\begin{itemize}
+  \item Každý student může mít v každé hodině nejvýše jednu přednášku.
+  \item Přiřazená místnost musí splňovat vlastnosti vyžadované přednáškou.
+  \item Přiřazená místnost musí mít dostatečnou kapacitu na všechny studenty účastnící se přednášky.
+  \item V každé místnosti v jedné vyučovací hodině se může konat nejvýše jedna přednáška.
+\end{itemize}
+Kvalita řešení se poté hodnotí podle počtu porušení měkkých omezení:
+\begin{itemize}
+  \item Student by neměl mít přednášku v poslední hodině dne.
+  \item Každý student by měl mít nejvýše 2 navazující přednášky.
+  \item Student by měl mít za den více než jednu přednášku.
+\end{itemize}
+% ozdrojovana fakta
+% pojmy ze SNT CITOVAT!!!
+\section{Algoritmus páření včel pro problém rozvrhnutí univerzitních přednášek}
+% zdrojuj
+% TODO cituj honey-bee
+Algoritmus páření včel je jedním z optimalizačních algoritmů inspirovaných přírodou.
+Včelí kolonie sestává z královny (nejlepší nalezené řešení), trubců (možná řešení), pracovníků (heuristická vylepšení)
+a mladušek (potenciální řešení).
+
+Nejprve je vytvořena počáteční populace řešení. Nejlepší z počátečních řešení je zvoleno za královnu. Algoritmus sestává z opakovaného páření královny a vytváření mladušek.
+
+\subsection{Vytvoření počáteční populace}
+Na začátku je potřeba získat několik řešení, která neporušují žádná tvrdá omezení.
+Tato řešení jsou poté použita jako první generace trubců a nejlepší z nich jako královna.
+
+Pro vytvoření počáteční generace využíváme tří heuristik pro barvení grafu:
+\begin{itemize}
+  \item SD: přednášky jsou seřazeny vzestupně podle počtu vyučovacích hodin, do kterých je lze přiřadit
+  \item LD: přednášky jsou seřazeny sestupně podle počtu všech přednášek, se kterými mají společné studenty
+  \item LE: přednášky jsou seřazeny sestupně podle počtu studentů, kteří se této přednášky účastní
+\end{itemize}
+Všechny události nejdříve seřadíme podle těchto tří heuristik (s prioritami SD > LD > LE). Náhodně vybereme některou z platných vyučovacích hodin pro první přednášku v seznamu a zařadíme
+ji do platné místnosti s nejmenší velikostí a následně nejmenším počtem vlastností.
+Události znovu seřadíme a opakujeme náhodný výběr vyučovacích hodin a přiřazení do místnosti.
+Pokud jsme nepřiřadili všechny události, a první událost v seznamu nemá žádnou přiřaditelnou vyučovací hodinu nebo ji nelze přiřadit do místnosti ve vybrané vyučovací hodině, dosavadní částečné řešení
+zahodíme a začneme znovu. Experimentálně se ukázalo, že není potřeba zavádět prohledávání stavového prostoru, a že tento mechanismus je dostatečný. Při generování počátečních řešení se díky heuristikám jen vzácně vyskytlo několikanásobné zahazování částečných řešení.
+
+Takto můžeme vytvořit každého z počátečních trubců.
+\subsection{Páření královny}
+Algoritmus páření včel simuluje přirozené chování včelí královny při páření.
+Královna létá a páří se s trubci. Při úspěšném páření v sobě královna uchovává spermie trubců.
+Královna končí páření, když jí dojde energie (v algoritmu se blíží nule); energie je po každém pokusu o páření násobena konstantou $\alpha = 0.9$.
+V algoritmu se používá pravděpodobnostní model páření s trubci v závislosti jejich cenové funkci $f$: $p(queen, drone) = e^{\frac{f(queen) - f(drone)}{energy(t)}}$.
+Cenová funkce $f$ je v případě problému rozvrhnutí počet porušení měkkých omezení. Na začátku letu má královna vysokou energii, a pravděpodobnost páření je tak vyšší.
+
+\subsection{Vytvoření nové generace}
+Po ukončení letů nastává vytváření mladušek. Tyto vznikají křížením nashromážděných spermií s genetickou informací královny.
+Vzniklá mladuška je poté nakrmena (vylepšena) pracovníkem pro její zlepšení. Pokud je nejlepší mladuška lepší než současná královna, nahradí ji pro příští cyklus páření.
+Zachování starých trubců vede k příliš rychlé konvergenci, kde se algoritmus zasekne na lokálním extrému.
+V modifikaci pro tento problém se proto všichni trubci po páření zabijí a jsou nahrazeni modifikovanými mladuškami a případně starou královnou (pokud byla nahrazena).
+
+\subsubsection{Křížení královny s trubcem}
+Jako gen řešení je braná jedna vyučovací hodina, tzn. všechny přednášky přiřazené do místností v jedné hodině v jednom dni.
+Pro křížení královny s trubcem je použitý následující postup:
+Z královny a trubce je vybráno 8 genů a výsledek se vytvoří jako kopie královny.
+Pro každou dvojici genů $(q_k, t_k)$ se provede přesouvání přednášek z genu trubce do nového genu královny.
+Po jednom se vybírají přiřazené přednášky z genu trubce a zařazují se do genu královny.
+Pokud se již přednáška v genu královny vyskytuje, nebo by přemístěním této přednášky vznikl konflikt, nebo pokud nelze nalézt místnost, do které by šla tato přednáška zařadit,
+předmět se nepřesouvá. Pokud nevznikne konflikt a lze nalézt místnost, je tato přednáška odstraněna ze svého původního umístění z genu královny.
+
+Po přesunutí všech vybraných genů vzniká mladuška.
+\subsubsection{Zlepšení mladušky}
+Po dokončení křížení je mladuška vylepšena pracovníkem.
+V přístupu z %TODO
+je použité lokální prohledávání stavového prostoru.
+Opakovaně se vybere náhodná přednáška a přesune se do náhodné vyučovací hodiny, která nenaruší tvrdá omezení.
+Pokud tato změna zmenší počet porušení měkkých omezení, je přijata, pokud ne, je řešení zachováno ve své původní podobě.
+\subsubsection{Kempe-chain stuktury}
+Před použitím mladušek jako nových trubců je zvýšený jejich počet a jsou pozměněné pomocí Kempe-chain struktur.
+Mladušky se duplikují, aby jejich celkový počet odpovídal požadované velikosti populace trubců a následně jsou promíchány.
+
+Kempe-chain struktura %todo cituj
+pochází z barvení grafů: jde o největší souvislou komponentu sousedících uzlů, které jsou obarveny střídavě barvou $a$ a $b$. Poté je možné v této struktuře prohodit barvy $a$ a $b$.
+Pro problém plánování přednášek lze najít Kempe-chain strukturu následovně:
+Vybereme dvě vyučovací hodiny $x$ a $y$. Náhodně vybereme některou z přednášek přiřazenou do $x$ a vložíme ji do množiny $K_x$. Poté nalezneme všechny přednášky z $y$, které jsou v konfliktu s přednáškami z množiny $K_x$ a přidáme je do množiny $K_y$.
+Poté střídavě přidáváme přednášky z $x$ do $K_x$, které mají konflikt s některou přednáškou z $K_y$, a přidáváme přednášky z $y$ do $K_y$, které mají konflikt s některou přednáškou z $K_x$.
+Cyklus přerušíme, když se ustálí velikost $K_x$ i $K_y$. Poté můžeme z $x$ a $y$ uvolnit místnosti zabrané přednáškami z $K_x$ a $K_y$ a přiřadit do $x$ přednášky z $K_y$ a do $y$ přednášky z $K_x$.
+Pokud nelze pro některou z přednášek nalézt volnou místnost, musí být celá změna zamítnuta a musí být případně zvolené jiné dvě vyučovací hodiny.
+
+\section{Implementace}
+\section{Experimenty}
+\section{Závěr}
+%shrnout vysledky a experimenty
+\end{document}
