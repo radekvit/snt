@@ -31,19 +31,21 @@ CourseSolution HbmoEtp::run() {
   size_t lastConflicts = 0;
   create_drone_population();
   broodPopulation.reserve(queenSpermLimit * 4);
-  
+
   std::cerr << "iteration\tconflicts\n";
   calculate_drones_conflicts();
   select_queen();
   // mating flight
-  for (iteration = 0; iteration < matingFlights && queenConflicts > conflictThreshold; ++iteration) {
-    if( lastConflicts != queenConflicts) {
+  for (iteration = 0;
+       iteration < matingFlights && queenConflicts > conflictThreshold;
+       ++iteration) {
+    if (lastConflicts != queenConflicts) {
       std::cerr << iteration << "\t\t" << queenConflicts << "\n";
       lastConflicts = queenConflicts;
     }
     double energy = snt_rand(0.5, 1.0);
 
-    if(dronePopulation.size() == 0) {
+    if (dronePopulation.size() == 0) {
       break;
     }
 
@@ -383,7 +385,7 @@ void HbmoEtp::create_drone_population() {
 
   vector<vector<size_t>> feasibleTimeslots(problem.nCourses, vector<size_t>());
   std::vector<size_t> courseConflicts(problem.nCourses, 0);
-  for(auto&& course: courses) {
+  for (auto&& course : courses) {
     courseConflicts[course] = m_course_conflicts(course);
   }
   heuristic_sort(emptySolution, courses, feasibleTimeslots, courseConflicts);
@@ -413,12 +415,13 @@ void HbmoEtp::create_drone_population() {
     dronePopulation.push_back(s);
   }
   std::cerr << "Done creating initial solutions.\n";
-  
 }
 
 void HbmoEtp::heuristic_sort(const CourseSolution& sln,
-                             std::deque<int>& courses, vector<vector<size_t>>& feasibleTimeslots, const std::vector<size_t>& courseConflicts) {
-  for(auto course: courses) {
+                             std::deque<int>& courses,
+                             vector<vector<size_t>>& feasibleTimeslots,
+                             const std::vector<size_t>& courseConflicts) {
+  for (auto course : courses) {
     feasibleTimeslots[course] = m_feasible_timeslots(sln, course);
   }
   auto compare = [&](int a, int b) {
