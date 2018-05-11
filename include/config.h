@@ -11,9 +11,6 @@
 // number of selected crossover genes = 8
 // simple descent iterations = 5000
 
-inline constexpr double alpha = 0.9;
-inline constexpr double epsilon = 0.0000001;
-
 inline constexpr size_t droneNumber = 40;
 // I don't have 4 hours for each run
 inline constexpr size_t matingFlights = 2'000;

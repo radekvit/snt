@@ -78,7 +78,7 @@ class HbmoEtp {
   std::pair<std::set<int>, std::set<int>> get_kempe_chain(
       const CourseSolution& brood, unsigned T1, unsigned T2);
   bool find_room(int course, const vector<int>& slot, size_t& result);
-  std::tuple<CourseSolution, size_t> random_select_drone();
+  CourseSolution random_select_drone();
   void slotCrossover(CourseSolution& result, const vector<int>& aSlot,
                      const vector<int>& bSlot, vector<int>& resultSlot);
   bool conflicts_with(int course, const vector<int>& slot);

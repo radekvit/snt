@@ -50,4 +50,4 @@ run: all
 	./$(APPNAME)
 
 pack: clean
-	zip -r xvitra00.zip dplc $(LIBDIR) $(SRC) $(INCLUDE) Makefile README.txt examples
+	zip -r xvitra00.zip $(SRC) $(INCLUDE) Makefile xvitra00.pdf checksln.cpp tests.zip

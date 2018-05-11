@@ -43,24 +43,18 @@ CourseSolution HbmoEtp::run() {
       std::cerr << iteration << "\t\t" << queenConflicts << "\n";
       lastConflicts = queenConflicts;
     }
-    double energy = snt_rand(0.5, 1.0);
 
     if (dronePopulation.size() == 0) {
       break;
     }
 
-    while (energy > epsilon && queen.sperm_count() < queenSpermLimit) {
-      auto && [ drone, sdroneConflicts ] = random_select_drone();
-      size_t conflicts_diff = queenConflicts - sdroneConflicts;
-      double r = snt_rand(0.0, 1.0);
-      if (exp(-(conflicts_diff / energy)) < r) {
-        queen.add_sperm(drone);
+    while (queen.sperm_count() < queenSpermLimit) {
+      auto && drone = random_select_drone();
+      queen.add_sperm(drone);
         // http://www.veterinaryhub.com/male-honey-bee-dies-during-sex/
         // drone.testicles.explode();
         // drone.do_a_backflip();
         // drone.die();
-      }
-      energy *= alpha;
     }
     for (auto&& sperm : queen.sperms) {
       auto&& brood = generate_brood(queen.body, sperm);
@@ -81,7 +75,6 @@ CourseSolution HbmoEtp::run() {
     std::copy(copy.begin(), copy.end(), std::back_inserter(broodPopulation));
     shake_kempe_chain();
     dronePopulation.swap(broodPopulation);
-    calculate_drones_conflicts();
 
     broodPopulation.clear();
     queen.clear_sperms();
@@ -210,9 +203,9 @@ size_t HbmoEtp::compare_conflicts(size_t cq, size_t cb) {
   }
 }
 
-std::tuple<CourseSolution, size_t> HbmoEtp::random_select_drone() {
+CourseSolution HbmoEtp::random_select_drone() {
   auto i = snt_rand((unsigned)dronePopulation.size());
-  return {dronePopulation[i], droneConflicts[i]};
+  return dronePopulation[i];
 }
 
 CourseSolution HbmoEtp::generate_brood(const CourseSolution& a,

@@ -10,6 +10,7 @@
 \usepackage{mathtools}
 \usepackage{listings}
 \usepackage{color}
+\usepackage{pgfplots}
 \PassOptionsToPackage{hyphens}{url}\usepackage{hyperref}
 
 \usepackage{calrsfs}
@@ -43,6 +44,8 @@
 \def\CC{{C\nolinebreak[4]\hspace{-.05em}\raisebox{.4ex}{\tiny\bf ++}}}
 \def\CS{{\settoheight{\dimen0}{C}C\kern-.05em \resizebox{!}{\dimen0}{\raisebox{\depth}{\#}}}}
 
+\bibliographystyle{ieeetr}
+
 \author{Radek Vít\\ \texttt{xvitra00}}
 \title{
 	\includegraphics[scale=0.6]{FIT_barevne_PANTONE_CZ.pdf}\\
@@ -56,23 +59,30 @@
 
 \section{Úvod}
 % proc tato prace
+Problém rozvrhnutí univerzitních přednášek je jedním z běžně řešených optimalizačních problémů.
+
 % muj prinos
+Implementoval jsem algoritmus popisovaný v článku "A honey-bee mating optimization algorithm for educational timetabling problems"
+(viz. \cite{HoneyBee}) a provedl jsem experimenty, kde jsem porovnával výsledky proti jiným algoritmům implementovanými
+kolegy v rámci předmětu SNT. Znázorňuji také na jednom experimentu, jak se mění nejlepší nalezený výsledek v závislosti na počtu provedených iterací hlavní smyčky algoritmu (pářicích běhů).
+
 % v jakem prostredi
+Projekt byl implementovaný v \CC{}17 a je implementovaný jen pomocí standardní knihovny, je tedy přeložitelný a spustitelný na jakémkoliv stroji s verzí překladače \CC{}, která podporuje \CC{}17.
 \section{Popis problému}
-Problém rozvrhnutí univerzitních přednášek je definovaný jako %TODO citace z HoneyBee
-přiřazení daného počtu přednášek (také courses) do daného počtu vyučovacích hodin (také timeslots) a místností,
+Problém rozvrhnutí univerzitních přednášek (viz. \cite{HoneyBee}) je definovaný jako 
+při\-řa\-ze\-ní daného počtu přednášek (také courses) do daného počtu vyučovacích hodin (také timeslots) a místností,
 kde je splněná množina tvrdých omezení. %citovat Socha
 V této práci se zaměřuji na tento konkrétní model úlohy, kterou tvoří:
 \begin{itemize}
   \item množina přednášek $C$
   \item množina vyučovacích hodin $T = \{t_n | n \in \{0, \dots, 45)\}\}$ (9 pro každý den)
-  \item množina místností $R = \{r_j | (j = 0, \dots, R)\}$
+  \item množina místností $R$
   \item množina vlastností místností $F$
   \item množina studentů $S$
 \end{itemize}
-Každý student $s \in S$ chodí na přednášky $C_s \subseteq C$. Každá místnost $r \in R$ má některé z vlastností $f_r \subseteq F$ a nějakou kapacitu $s_r \in \mathbb{N}$.
+Každý student $s \in S$ chodí na přednášky $c_s \subseteq C$. Každá místnost $r \in R$ má vlastnosti $f_r \subseteq F$ a kapacitu $s_r \in \mathbb{N}$.
 
-Úlohou je přiřadit každou přednášku $c_i$ do hodiny $t_n$ a místnosti $r_j$ tak, aby byla splněna následující tvrdá omezení:
+Úlohou je přiřadit každou přednášku $c \in C$ do některé hodiny $t_n \in T$ a místnosti $r_j \in R$ tak, aby byla splněna následující tvrdá omezení:
 \begin{itemize}
   \item Každý student může mít v každé hodině nejvýše jednu přednášku.
   \item Přiřazená místnost musí splňovat vlastnosti vyžadované přednáškou.
@@ -83,41 +93,36 @@ Kvalita řešení se poté hodnotí podle počtu porušení měkkých omezení:
 \begin{itemize}
   \item Student by neměl mít přednášku v poslední hodině dne.
   \item Každý student by měl mít nejvýše 2 navazující přednášky.
-  \item Student by měl mít za den více než jednu přednášku.
+  \item Pokud má student v jednom dni alespoň jednu přednášku, měl by mít alespoň dvě.
 \end{itemize}
-% ozdrojovana fakta
-% pojmy ze SNT CITOVAT!!!
 \section{Algoritmus páření včel pro problém rozvrhnutí univerzitních přednášek}
-% zdrojuj
-% TODO cituj honey-bee
 Algoritmus páření včel je jedním z optimalizačních algoritmů inspirovaných přírodou.
-Včelí kolonie sestává z královny (nejlepší nalezené řešení), trubců (možná řešení), pracovníků (heuristická vylepšení)
-a mladušek (potenciální řešení). Popis algoritmu i jeho modifikace je převzatá z článku "A honey-bee mating optimization algorithm for educational timetabling problems" (viz. \cite{HoneyBee}).
-Základní algoritmus 
+Následující popis algoritmu je převzaný z \cite{HoneyBee}.
 
+Včelí kolonie sestává z královny (nejlepší nalezené řešení), trubců (možná řešení), pracovníků (heuristická vylepšení)
+a mladušek (potenciální řešení).
 Na začátku je vytvořena populace trubců a nejlepší z nich je zvolený za královnu.
 Poté se po daný počet opakování opakuje cyklus páření a vytváření nové generace.
 
 Královně je přiřazena energie $e_{t0} = random \in <0.5, 1>$.
-Poté královna náhodně navštivuje trubce, dokud se nespářila s předem daným počtem, nebo dokud jí nedojde energie ($e_t \leq \epsilon$).
-Při každé návštěvě trubce je pravděpodobnost spáření se s daným trubcem závislá na jejich fitness funkci $f$:
+Poté královna náhodně navštivuje trubce, dokud se nespářila s předem daným počtem, nebo dokud jí nedojde energie ($e_t < \epsilon$).
+Při každé návštěvě trubce je prav\-dě\-po\-dob\-nost spáření se s daným trubcem závislá na jejich fitness funkci $f$:
 $p(queen, drone) = e^{\frac{f(queen) - f(drone)}{energy(t)}}$.
+Pro tento problém je fitness funkcí počet porušení měkkých podmínek (královna tak má vždy nižší hodnotu než trubec).
 Na začátku letu má královna vysokou energii, a pravděpodobnost páření je tak vyšší.
-Po každém pokusu o páření je zmenšena energie královny ($e_{t+1} = e_{t} * \Alpha$, $\Alpha = 0.9$.
+Po každém pokusu o páření je zmenšena energie královny ($e_{t+1} = e_{t} * \alpha$, $\alpha = 0.9$).
 
 Po dokončení páření tvoří královna mladušky křížením své genetické informace s genetickou informací trubců, se kterými se královna spářila (jedna mladuška pro každého trubce).
-Mladušce je přiřazena včela pracovník (heuristicka) pro zlepšení fitness funkce mladušky.
+Mladušce je přiřazena včela pracovník (heuristika) pro zlepšení fitness funkce mladušky.
 Pokud je mladuška lepší než královna, vymění si s ní místo a stává se tedy novou královnou.
-Proti algoritmu z článku je implementovaný přístup pozměněný: po nalezení lepšího řešení jsou nové mladušky vytvořeny křížením
-nové královny se zbývajícími geny trubců.
 
-V původní verzi algoritmu se pro další cyklus páření a vytváření mladušek trubci nemění, nicméně toto vede k příliš rychlé konvergenci
-a původní populace trubců je po pozměnění pomocí Kempe-chain struktur nahrazena populací mladušek.
-Tento přístup zabraňuje předčasné konvergenci algoritmu.
+V obecné verzi algoritmu se pro další cyklus páření a vytváření mladušek trubci nemění, nicméně tento přístup vede k příliš rychlé konvergenci.
+V modifikaci pro problém rozvrhnutí přednášek je předchozí generace trubců úplně nahrazena pozměněnými mladuškami (pomocí Kempe-chain struktur).
+Tento modifikovaný přístup zabraňuje předčasné konvergenci algoritmu.
 
 \subsection{Vytvoření počáteční populace}
 Na začátku je potřeba získat několik řešení, která neporušují žádná tvrdá omezení.
-Tato řešení jsou poté použita jako první generace trubců a nejlepší z nich jako královna.
+Tato řešení jsou poté použita jako první generace trubců a nejlepší z nich také jako královna.
 
 Pro vytvoření počáteční generace využíváme tří heuristik pro barvení grafu:
 \begin{itemize}
@@ -127,30 +132,32 @@ Pro vytvoření počáteční generace využíváme tří heuristik pro barvení
 \end{itemize}
 Všechny události nejdříve seřadíme podle těchto tří heuristik (s prioritami $SD > LD > LE$). Náhodně vybereme některou z platných vyučovacích hodin pro první přednášku v seznamu a zařadíme
 ji do platné místnosti s nejmenší velikostí a následně nejmenším počtem vlastností.
-Události znovu seřadíme a opakujeme náhodný výběr vyučovacích hodin a přiřazení do místnosti.
-Pokud jsme nepřiřadili všechny události, a první událost v seznamu nemá žádnou přiřaditelnou vyučovací hodinu nebo ji nelze přiřadit do místnosti ve vybrané vyučovací hodině, dosavadní částečné řešení
+Události znovu seřadíme a opakujeme náhodný výběr vyučovacích hodin a přiřazení do míst\-nos\-ti.
+Pokud jsme nepřiřadili všechny události, a první událost v seznamu nemá žádnou přiřaditelnou vyučovací hodinu nebo ji nelze přiřadit do míst\-nos\-ti ve vybrané vyučovací hodině, dosavadní částečné řešení
 zahodíme a začneme znovu.
 Experimentálně se ukázalo, že není potřeba pro případ selhání zavádět prohledávání stavového prostoru (např. backtracking):
-při generování počátečních řešení se díky heuristikám jen vzácně vyskytnul případ, kdy nebylo možné zbývajícím hodinám přiřadit místo,
-a nedochází tedy několikanásobné zahazování částečných řešení.
+při generování po\-čá\-teč\-ních řešení se díky heuristikám jen vzácně vyskytnul případ, kdy nebylo možné zbývajícím hodinám přiřadit místo,
+a nedochází tedy ně\-ko\-li\-ka\-ná\-sob\-né zahazování částečných řešení.
 
 Tento přístup negarantuje, že existuje nějaké splnitelné řešení; v případě, že žádné neexistuje, zůstane algoritmus v nekonečné smyčce.
-V žádné z testovaných úloh tento problém nenastal, a řešení nesplnitelných úloh není předmětem tohoto algoritmu.
+V žádné z testovaných úloh však tento problém nenastal.
 
 \subsubsection{Křížení královny s trubcem}
 Jako gen řešení je braná jedna vyučovací hodina, tj. všechny přednášky přiřazené do místností v jedné hodině v jednom dni.
 Pro křížení královny s trubcem je použitý následující postup:
-Z královny a trubce je vybráno 8 genů a výsledek se vytvoří jako kopie královny.
-Pro každou dvojici genů $(q_k, t_k)$ se provede přesouvání přednášek z genu trubce do nového genu královny.
-Po jednom se vybírají přiřazené přednášky z genu trubce a zařazují se do genu královny.
-Pokud se již přednáška v genu královny vyskytuje, nebo by přemístěním této přednášky vznikl konflikt, nebo pokud nelze nalézt místnost, do které by šla tato přednáška zařadit,
-předmět se nepřesouvá. Pokud nevznikne konflikt a lze nalézt místnost, je tato přednáška odstraněna ze svého původního umístění z genu královny.
+Mladuška je vytvořena jako kopie královny.
+Z mladušky i trubce je náhodně vybráno 8 genů:
+Pro každou dvojici genů $(q_k, t_k)$ se provede přesouvání přednášek z genu trubce do genu mladušky.
+Po jednom se vybírají přiřazené přednášky z genu trubce a zařazují se do genu mladušky.
+Pokud se již přednáška v genu mladušky vyskytuje, nebo by přemístěním této přednášky vznikl konflikt, nebo pokud nelze nalézt místnost, do které by šla tato přednáška zařadit,
+předmět se nepřesouvá. Pokud nevznikne konflikt a lze nalézt místnost, je tato přednáška odstraněna ze svého původního umístění z genu mladušky.
 
 \subsubsection{Zlepšení mladušky}
 Po dokončení křížení je mladuška vylepšena pracovníkem.
 Pro vylepšení podle použitého algoritmu z \cite{HoneyBee} je použité lokální prohledávání stavového prostoru.
 Opakovaně se vybere náhodná přednáška a přesune se do náhodné vyučovací hodiny, která nenaruší tvrdá omezení.
 Pokud tato změna zmenší počet porušení měkkých omezení, je přijata, pokud ne, je řešení zachováno ve své původní podobě.
+Je provedený pevně daný počet iterací tohoto postupu.
 
 \subsubsection{Kempe-chain stuktury}
 Před použitím mladušek jako nových trubců je zvýšený jejich počet a jsou pozměněné pomocí Kempe-chain struktur.
@@ -159,27 +166,193 @@ Mladušky se duplikují, aby jejich celkový počet odpovídal požadované veli
 Kempe-chain struktura (viz. \cite{Kempe})
 pochází z barvení grafů: jde o největší souvislou komponentu sousedících uzlů, které jsou obarveny střídavě barvou $a$ a $b$. Poté je možné v této struktuře prohodit barvy $a$ a $b$.
 Pro problém plánování přednášek lze najít Kempe-chain strukturu následovně:
-Vybereme dvě vyučovací hodiny $x$ a $y$. Náhodně vybereme některou z přednášek přiřazenou do $x$ a vložíme ji do množiny $K_x$. Poté nalezneme všechny přednášky z $y$, které jsou v konfliktu s přednáškami z množiny $K_x$ a přidáme je do množiny $K_y$.
-Poté střídavě přidáváme přednášky z $x$ do $K_x$, které mají konflikt s některou přednáškou z $K_y$, a přidáváme přednášky z $y$ do $K_y$, které mají konflikt s některou přednáškou z $K_x$.
-Cyklus přerušíme, když se ustálí velikost $K_x$ i $K_y$. Poté můžeme z $x$ a $y$ uvolnit místnosti zabrané přednáškami z $K_x$ a $K_y$ a přiřadit do $x$ přednášky z $K_y$ a do $y$ přednášky z $K_x$.
+Vybereme dvě vyučovací hodiny $x$ a $y$.
+Náhodně vybereme některou z přednášek při\-řa\-ze\-nou do $x$ a vložíme ji do množiny $K_x$.\\
+Definujeme predikát $Conflict(a, b) = \exists s \in S: (a \cup b) \subseteq c_s$, značící konflikt mezi přednáškami.
+Dále definujeme predikát $Assigned(a, x)$, který platí, když je přednáška $a$ přiřazena do hodiny $x$.
+Poté můžeme sestrojit obě množiny $K_x$ i $K_y$ následovně:
+$$(v \in K_x \land Assigned(w, y) \land Conflict(v, w)) \implies w \in K_y$$
+$$(v \in K_y \land Assigned(w, x) \land Conflict(v, w)) \implies w \in K_x$$
+Poté můžeme z $x$ a $y$ uvolnit místnosti zabrané přednáškami z $K_x$ a $K_y$ a přiřadit do $x$ přednášky z $K_y$ a do $y$ přednášky z $K_x$.
 Pokud nelze pro některou z přednášek nalézt volnou místnost, musí být celá změna zamítnuta a musí být případně zvolené jiné dvě vyučovací hodiny.
 
 \section{Implementace}
-Optimalizační nástroj byl implementovaný v \CC{}17.
-Třídy modelující problém jsou definované a implementované v souboru \texttt{course_timetabling.h}.
+Optimalizační nástroj byl implementovaný v \CC{}17. Pro změnu použitého překladače je možné v souboru \texttt{Makefile} změnit na prvním řádku obsah proměnné \texttt{CXX}.
+Třídy modelující problém jsou definované a implementované v souboru \texttt{course\_timetabling.h}.
 Samotný algoritmus, jak je popsaný v tomto článku, je implementovaný ve třídě \texttt{HbmoEtp} a jeho spuštění
 implementuje metoda \texttt{run}.
 
 Použité parametry algoritmu se nacházejí v souboru \texttt{config.h}. Úpravou tohoto souboru a novou kompilací
-lze pozměnit parametry samotného algoritmu: počet iterací páření, koeficient úbytku energie, počet trubců, počet mladušek (pro tuto implementaci by měl odpovídat čtvrtině počtu trubců),
+lze pozměnit parametry samotného algoritmu: počet iterací páření, počet trubců, počet mladušek (pro tuto implementaci by měl odpovídat čtvrtině počtu trubců),
 počet křížených genů a počet iterací heuristického zlepšení mladušek. Nastavit lze také hranici kvality královny, po jejímž dosažení se algoritmus předčasně ukončí.
+Počet trubců byl podle doporučení z \cite{HoneyBee} nastavený na 40, počet mladušek a křížených trubců na 10, počet křížených genů na 8, a počet iterací
+vylepšování mladušek na 4000. Počet cyklů algoritmu byl pro většinu experimentů z časových důvodů snížený z doporučených 10000 na 2000.
 
-Program čte problém se standardního vstupu ve formátu specifikovaném na adrese \url{http://sferics.idsia.ch/Files/ttcomp2002/IC_Problem/node7.html}
-a výsledek vypisuje na standardní výstup.
-V průběhu provádění algoritmu jsou na chybový výstup vypisované doprovodné informace o nejlepším dosaženém výsledku.
+Popsaný algoritmus je implementovaný tak, jak je popsaný v předchozí sekci, s následujícími modifikacemi:\\
+Kvůli chybě při výpočtu pravděpodobnosti výběru trubce v původní implementaci bylo odhaleno, že pravděpodobnostní výběr trubce nemá pozorovatelný vliv na výslednou kvalitu řešení.
+Byla proto možné z algoritmu odstranit proměnnou energie a jejího úbytku, a křížit královnu v každém cyklu s několika náhodně vybranými trubci (vždy úspěšně).\\
+Pokud je nalezeno nové nejlepší řešení během fáze křížení, královna je zařazena do populace mladušek a
+nejlepší mladuška nahrazuje královnu, a to i pro zbytek křížení v tomto cyklu.\\
+Nová populace trubců je vytvořena duplikací mladušek a jejich modifikací pomocí Kempe-chain struktur.
+
+Vstupně/výstupní formát problému a řešení byl převzaný z \url{http://sferics.idsia.ch/Files/ttcomp2002/oldindex.html}.
+Program čte problém se standardního vstupu a výsledné nejlepší nalezené řešení vypisuje na standardní výstup.
+V průběhu provádění algoritmu jsou na chybový výstup vypisované doprovodné informace o nejlepším dosaženém výsledku, především
+počet konfliktů nejlepšího dosaženého řešení a na začátku které iterace jej bylo dosaženo.
+
+Výsledky byly ověřené pomocí nástroje \texttt{tester}, který je kompilovaný ze zdrojového souboru dostupného
+na adrese soutěže (soubor \texttt{checksln.cpp}), a program opravdu generuje kompletní a validní řešení.
+Výpočet porušení měkkých omezení také souhlasí s informačními výstupy programu.
 
 \section{Experimenty}
-S výsledným optimalizačním nástrojem
+S výsledným optimalizačním nástrojem jsem prováděl dva typy experimentů. V prvním jsem provedl několik běhů programu pro společnou sadu vstupů a porovnal výsledky s ostatními projekty ze SNT.
+V druhém jsem zvětšil počet iterací algoritmu na 10000 a sledoval jsem, jak se vyvíjí kvalita nalezeného řešení v závislosti na počtu iterací.
+
+\subsection{Srovnání s ostatními algoritmy}
+Experimenty byly prováděny na společné sadě vstupů (v souboru \texttt{tests.zip}). Pro každý vstupní soubor jsem provedl čtyři běhy, a nejlepší výsledek jsem vybral pro porovnání.
+I s takto sníženým počtem iterací trvá jeden běh až půl hodiny (na procesoru Intel 7700HQ), pro
+rychlé vyzkoušení doporučuji počet iterací kolem 100.
+
+Porovnání mých výsledků (xvitra00) proběhlo proti následujícím algoritmům:
+\begin{itemize}
+  \item A Differential Evolution Algorithm (xvales02)
+  \item Iterative Improvement Algorithm with Composite Neighbourhood Structures (xvales03)
+  \item A hybrid evolutionary approach (xmarus06)
+\end{itemize}
+Výsledky porovnání jsou v tabulce \ref{tab:comp}.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{| c | c | c | c | c |}
+\hline
+vstupní soubor & \textbf{xvitra00} & \textbf{xvales02} & \textbf{xvales03} & \textbf{xmarus06} \\ \hline 
+small1.tim & \textbf{11} & 47 & 31.2 & 33 \\ \hline
+small2.tim & \textbf{21} & \textbf{21} & 34.5 & 32 \\ \hline
+small3.tim & \textbf{16} & 38 & 28.0 & 26 \\ \hline
+small4.tim & 45 & 53 & 41.7 & \textbf{42} \\ \hline
+small5.tim & \textbf{20} & 37 & 32.6 & 30 \\ \hline
+medium1.tim & \textbf{27} & 237 & 255.9 & 234 \\ \hline
+medium2.tim & 154 & \textbf{62} & 126.2 & 132 \\ \hline
+medium3.tim & \textbf{117} & 205 & 289 & 269 \\ \hline
+medium4.tim & \textbf{26} & 66 & 173.1 & 170 \\ \hline
+medium5.tim & \textbf{27} & 76 & 168.2 & 145 \\ \hline
+large.tim & 369 & \textbf{342} & 408.4 & 468 \\ \hline
+\end{tabular}
+\caption{Porovnání počtu porušení měkkých omezení (nejlepší výsledek je zvýrazněn tučně)}
+\label{tab:comp}
+\end{table}
+
+Pro většinu problémů z testovací sady přinesl algoritmus páření včel lepší nebo alespoň porovnatelné výsledky v porovnání s ostatní přístupy.
+U osmi z jedenácti vstupů dosáhnul dokonce nejlepších výsledků ze všech porovnávaných přístupů (toto odpovídá výsledkům experimentů z článku \cite{HoneyBee}).
+Pro vstup \texttt{medium2} ale dosáhnul horších výsledků než ostatní porovnávané algoritmy.
+
+\subsection{Nejlepší řešení podle počtu iterací}
+Pro tento experiment byl použitý vstupní soubor \texttt{large.tim} ze srovnávacích experimentů.
+Algoritmus byl spuštěný s doporučeným množstvím 10000 iterací a byly sledované jeho průběžné výsledky z výstupů na chybový výstup.
+Graf znázorňující body, kdy bylo dosažené nejlepší prozatímní řešení, je znázorněný na obrázku \ref{graph}.
+
+\begin{figure}
+\centering
+\begin{tikzpicture}[scale = 1.3]
+\begin{axis}[
+    xlabel={Počet iterací},
+    ylabel={Počet porušení měkkých omezení},
+    xmin=0, xmax=10000,
+    ymin=350, ymax=600,
+    %xtick={0,20,40,60,80,100},
+    %ytick={0,20,40,60,80,100,120},
+    legend pos=north west,
+    ymajorgrids=true,
+    xmajorgrids=true,
+    grid style=dashed,
+    xmode=log,
+    log ticks with fixed point
+]
+ 
+\addplot[only marks]
+    coordinates {
+    (0,783)
+    (0,783)
+    (1,592)
+    (2,574)
+    (3,564)
+    (4,552)
+    (5,544)
+    (57,538)
+    (58,533)
+    (72,529)
+    (73,520)
+    (74,517)
+    (129,514)
+    (282,509)
+    (462,502)
+    (463,501)
+    (521,499)
+    (623,496)
+    (643,494)
+    (714,483)
+    (715,478)
+    (716,477)
+    (745,469)
+    (746,454)
+    (747,450)
+    (918,448)
+    (919,447)
+    (920,444)
+    (921,440)
+    (1035,437)
+    (1036,433)
+    (1077,432)
+    (1093,431)
+    (1094,430)
+    (1165,422)
+    (1166,417)
+    (1279,416)
+    (1457,413)
+    (1458,409)
+    (1459,406)
+    (1799,399)
+    (1820,397)
+    (2224,396)
+    (2555,394)
+    (3038,391)
+    (3835,389)
+    (3967,388)
+    (4084,386)
+    (4229,379)
+    (4826,376)
+    (5976,373)
+    (6108,371)
+    (6648,366)
+    (7094,364)
+    (7236,362)
+    (10000,362)
+    };
+ 
+\end{axis}
+\end{tikzpicture}
+\caption{Průběh nejlepšího řešení podle počtu iterací}
+\label{graph}
+\end{figure}
+
+Z grafu můžeme pozorovat, že když se prozatímní řešení dostane z lo\-kál\-ní\-ho minima,
+dosáhne algoritmus typicky během následujících dvou iterací dalšího zlepšení řešení.
+Také můžeme pozorovat, že zlepšování řešení se zpomaluje, nedochází však k předčasné konvergenci (zlepšení se vyskytují i v pozdějších iteracích).
+
 \section{Závěr}
 %shrnout vysledky a experimenty
+Byl implementovám algoritmus páření včel pro problém rozvrhnutí univerzitních přednášek.
+Implementace byla zjednodušena odebráním prav\-dě\-po\-dob\-nos\-ti páření se královny s trubcem podle kvality trubce
+bez pozorovaného dopadu na výsledky algoritmu.
+
+Implementovaný algoritmus byl porovnaný proti některým ostatním optimalizačním algoritmům implementovaným v rámci předmětu SNT.
+Výsledky porovnání odpovídaly zá\-vě\-rům původního článku, algoritmus překonával os\-tat\-ní přístupy pro většinu vstupů i přes zmenšení počtu iterací na jednu pětinu doporučené hodnoty.
+Druhý experiment demonstruje, že algoritmus nekonverguje předčasně, a že i pro velké množství iterací nastává stálé zlep\-šo\-vá\-ní výsledku.
+
+\makeatletter
+    \def\@openbib@code{\addcontentsline{toc}{chapter}{Literatura}}
+
+\begin{flushleft}
+  \bibliography{doc}
+\end{flushleft}
 \end{document}
